@@ -1,0 +1,5 @@
+streamlit
+pandas
+xlsxwriter
+python-calamine
+openpyxl
