@@ -10,6 +10,33 @@ svc = MultiDataMatcherService()
 
 
 # ----------------------------------------------------------------------
+# [디자인 토큰] 색상/카드 스타일을 한 곳에서 관리 (통일감 유지)
+# ----------------------------------------------------------------------
+ACCENT = "indigo"   # 주요 강조 색 (하나의 계열로 통일)
+NEUTRAL = "gray"    # 보조 액션용 중립 색
+
+CARD_STYLE = {
+    "background": "white",
+    "border": "1px solid #e5e7eb",
+    "border_radius": "14px",
+    "box_shadow": "0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 20px rgba(15, 23, 42, 0.08)",
+}
+
+SUBCARD_STYLE = {
+    "background": "#fafafa",
+    "border": "1px solid #e5e7eb",
+    "border_radius": "10px",
+    "box_shadow": "0 1px 2px rgba(15, 23, 42, 0.04)",
+}
+
+LIST_BOX_STYLE = {
+    "border": "1px solid #e5e7eb",
+    "border_radius": "8px",
+    "background": "white",
+}
+
+
+# ----------------------------------------------------------------------
 # [모델] 비교 파일(파일B) 1개에 대한 설정 정보
 # ----------------------------------------------------------------------
 # Reflex 0.9부터 rx.Base가 제거되었습니다. 커스텀 var 타입은
@@ -72,10 +99,10 @@ class MatcherState(rx.State):
             # 업로드 완료 후 드롭존에 남아있던 선택 파일 표시를 정리
             yield rx.clear_selected_files("upload_a")
         except Exception as e:
-            self.df_a_name = f"❌ 파일A 로딩 에러: {str(e)}"
+            self.df_a_name = f"오류: {str(e)}"
 
     async def handle_add_ref_file(self, files: list[rx.UploadFile]):
-        """비교 파일 추가 (+) 버튼 클릭 시 대시보드에 카드 추가"""
+        """비교 파일 추가 버튼 클릭 시 대시보드에 카드 추가"""
         if not files:
             return
         file = files[0]
@@ -103,7 +130,7 @@ class MatcherState(rx.State):
             # 카드에 추가되었으니 드롭존의 선택 파일 표시는 정리
             yield rx.clear_selected_files("upload_b")
         except Exception as e:
-            self.result_message = f"❌ 비교 파일 추가 실패: {str(e)}"
+            self.result_message = f"오류: 비교 파일 추가 실패 - {str(e)}"
 
     def toggle_key_a(self, col: str, checked: bool):
         """파일A 매칭 기준열 체크박스 토글"""
@@ -150,17 +177,17 @@ class MatcherState(rx.State):
         yield  # 화면에 로딩 스피너 작동 유도
 
         if self._df_a is None:
-            self.result_message = "❌ 먼저 기준 파일(파일A)을 업로드해주세요."
+            self.result_message = "오류: 먼저 기준 파일(파일A)을 업로드해주세요."
             self.is_processing = False
             return
 
         if not self.ref_files:
-            self.result_message = "❌ 비교할 파일을 최소 1개 이상 추가해주세요."
+            self.result_message = "오류: 비교할 파일을 최소 1개 이상 추가해주세요."
             self.is_processing = False
             return
 
         if not self.keys_a:
-            self.result_message = "❌ 파일A의 매칭 기준열을 선택해주세요."
+            self.result_message = "오류: 파일A의 매칭 기준열을 선택해주세요."
             self.is_processing = False
             return
 
@@ -169,12 +196,12 @@ class MatcherState(rx.State):
         # 개수만큼 파일A 기준열이 선택되어 있어야 합니다.
         for item in self.ref_files:
             if not item.keys_b:
-                self.result_message = f"❌ '{item.name}' 파일의 매칭 기준열을 선택해주세요."
+                self.result_message = f"오류: '{item.name}' 파일의 매칭 기준열을 선택해주세요."
                 self.is_processing = False
                 return
             if len(self.keys_a) < len(item.keys_b):
                 self.result_message = (
-                    f"❌ '{item.name}'의 기준열({len(item.keys_b)}개)만큼 "
+                    f"오류: '{item.name}'의 기준열({len(item.keys_b)}개)만큼 "
                     f"파일A 기준열을 최소 {len(item.keys_b)}개 이상 선택해주세요."
                 )
                 self.is_processing = False
@@ -196,11 +223,11 @@ class MatcherState(rx.State):
             result_df = svc.process_multi_merge(self._df_a, ref_files_for_merge, self.keys_a)
             self._result_df = result_df
             self.result_row_count = len(result_df)
-            self.result_message = f"🎉 통합 매칭 완료! 총 {self.result_row_count}건 처리되었습니다."
+            self.result_message = f"완료: 총 {self.result_row_count}건 처리되었습니다."
             self.result_ready = True
 
         except Exception as e:
-            self.result_message = f"❌ 매칭 연산 중 에러: {str(e)}"
+            self.result_message = f"오류: 매칭 연산 중 문제가 발생했습니다 - {str(e)}"
 
         self.is_processing = False
 
@@ -226,47 +253,67 @@ class MatcherState(rx.State):
 def index() -> rx.Component:
     return rx.center(
         rx.vstack(
-            rx.heading("📊 다중 통합 매칭 시스템 v6.9", size="8"),
-            rx.text("자동 헤더 탐지 · 다중 파일 병합 · 불일치 사유 분석", color="gray"),
-            rx.divider(),
+            rx.vstack(
+                rx.heading("📊 다중 엑셀 데이터 매칭 시스템", size="7", color="#111827"),
+                rx.text(
+                    "자동 헤더 탐지 · 다중 파일 병합 · 불일치 사유 분석",
+                    color="#6b7280", size="2"
+                ),
+                spacing="1",
+                align_items="start",
+                margin_bottom="2",
+            ),
 
-            # ---- Grid 레이아웃 ----
-            # 데스크톱: 왼쪽 컬럼에 파일A 카드(위) + 실행/다운로드 카드(아래),
-            #           오른쪽 컬럼에 비교 파일 카드(세로로 길게, 두 행 모두 차지)
-            # 모바일(좁은 화면): 자동으로 1열 세로 배치로 전환
-            rx.box(
-                # ---- [영역 a] 파일A 설정 카드 ----
+            # [1, 2번 상단 가로 배치 구역]
+            rx.flex(
+                # 1. 기준 파일 설정 카드 (왼쪽 50%)
                 rx.card(
                     rx.vstack(
-                        rx.heading("1. 기준 파일 (파일A) 설정", size="4"),
+                        rx.heading("1. 기준 파일 (파일A) 설정", size="4", color="#374151"),
                         rx.upload(
                             rx.vstack(
-                                rx.text("📁 여기에 기준 파일 A(xlsx)를 드래그하거나 클릭하세요."),
+                                rx.text(
+                                    "📁 여기에 기준 파일 A(xlsx)를 드래그하거나 클릭하세요.",
+                                    color="#6b7280", size="2"
+                                ),
                                 rx.foreach(
                                     rx.selected_files("upload_a"),
-                                    lambda f: rx.text(f"📎 {f}", size="2", color="blue", font_weight="bold"),
+                                    lambda f: rx.text(f, size="2", color=ACCENT, font_weight="medium"),
                                 ),
                                 spacing="1",
                             ),
                             id="upload_a",
-                            border="2px dashed #ccc",
+                            border="1.5px dashed #d1d5db",
+                            border_radius="8px",
                             padding="4",
                             width="100%",
                         ),
                         rx.button(
                             "파일A 불러오기",
                             on_click=MatcherState.handle_upload_a(rx.upload_files(upload_id="upload_a")),
-                            color_scheme="blue",
+                            color_scheme=NEUTRAL,
+                            variant="soft",
+                            size="3",
+                            font_size="15px",
+                            font_weight="medium",
+                            border="1px solid #d1d5db",
                             width="100%"
                         ),
                         rx.cond(
                             MatcherState.df_a_loaded,
                             rx.vstack(
                                 rx.box(
-                                    rx.text(f"🟢 로드 완료: {MatcherState.df_a_name}", font_weight="bold", color="green"),
-                                    padding="2", bg="#f0fff4", border_radius="md", width="100%"
+                                    rx.text(
+                                        f"로드 완료: {MatcherState.df_a_name}",
+                                        font_weight="medium", color="#15803d", size="2"
+                                    ),
+                                    padding="2", bg="#f0fdf4", border_radius="6px", width="100%",
+                                    border="1px solid #dcfce7",
                                 ),
-                                rx.text("👉 매칭 기준열 선택 (다중 선택 가능):", font_weight="bold", size="2"),
+                                rx.text(
+                                    "매칭 기준열 선택 (다중 선택 가능)",
+                                    font_weight="medium", size="2", color="#374151"
+                                ),
                                 rx.vstack(
                                     rx.foreach(
                                         MatcherState.columns_a,
@@ -274,6 +321,7 @@ def index() -> rx.Component:
                                             col,
                                             checked=MatcherState.keys_a.contains(col),
                                             on_change=lambda checked: MatcherState.toggle_key_a(col, checked),
+                                            color_scheme=ACCENT,
                                         )
                                     ),
                                     spacing="1",
@@ -281,88 +329,83 @@ def index() -> rx.Component:
                                     max_height="150px",
                                     overflow_y="auto",
                                     width="100%",
-                                    border="1px solid #e2e8f0",
-                                    border_radius="md",
                                     padding="2",
+                                    style=LIST_BOX_STYLE,
                                 ),
                                 width="100%", spacing="2"
                             )
                         ),
+                        width="100%",
                     ),
-                    width="100%", padding="5",
-                    style={"gridArea": "a"},
+                    flex="1",
+                    padding="6",
+                    style=CARD_STYLE,
                 ),
 
-                # ---- [영역 c] 통합 매칭 가동 및 다운로드 구역 ----
+                rx.box(width="16px", flex_shrink="0"),  # 간격
+
+                # 2. 비교 파일 설정 카드 (오른쪽 50%)
                 rx.card(
                     rx.vstack(
-                        rx.heading("3. 다중 매칭 실행 및 통합 저장", size="4"),
-                        rx.button(
-                            "🔍 다중 매칭 시작 및 통합 저장",
-                            on_click=MatcherState.run_multi_match,
-                            loading=MatcherState.is_processing,
-                            color_scheme="iris",
-                            size="3",
-                            width="100%"
+                        rx.hstack(
+                            rx.heading("2. 비교 파일 추가 및 설정", size="4", color="#374151"),
+                            rx.text(
+                                "(여러 개 추가 가능)",
+                                size="2", color="#9ca3af"
+                            ),
+                            align_items="baseline",
+                            spacing="2",
                         ),
-                        rx.cond(
-                            MatcherState.result_ready,
-                            rx.box(
-                                rx.text(MatcherState.result_message, font_weight="bold", color="blue"),
-                                rx.button(
-                                    "📥 결과 파일 다운로드 (.xlsx)",
-                                    on_click=MatcherState.download_result,
-                                    color_scheme="green",
-                                    margin_top="2",
-                                    width="100%"
-                                ),
-                                padding="3", bg="#ebf8ff", border_radius="md", width="100%"
-                            )
-                        )
-                    ),
-                    width="100%", padding="5",
-                    style={"gridArea": "c"},
-                ),
-
-                # ---- [영역 b] 비교 파일 추가 및 동적 카드 배열 구역 ----
-                rx.card(
-                    rx.vstack(
-                        rx.heading("2. 비교 파일 추가 및 설정", size="4"),
                         rx.upload(
                             rx.vstack(
-                                rx.text("➕ 추가할 비교 파일들을 여기에 드래그앤드롭 하세요."),
+                                rx.text(
+                                    "📁 추가할 비교 파일들을 여기에 드래그앤드롭 하세요.",
+                                    color="#6b7280", size="2"
+                                ),
                                 rx.foreach(
                                     rx.selected_files("upload_b"),
-                                    lambda f: rx.text(f"📎 {f}", size="2", color="teal", font_weight="bold"),
+                                    lambda f: rx.text(f, size="2", color=ACCENT, font_weight="medium"),
                                 ),
                                 spacing="1",
                             ),
                             id="upload_b",
-                            border="2px dashed #aaa",
+                            border="1.5px dashed #d1d5db",
+                            border_radius="8px",
                             padding="4",
                             width="100%",
                         ),
                         rx.button(
-                            "이 파일 추가(+)",
+                            "이 파일 추가",
                             on_click=MatcherState.handle_add_ref_file(rx.upload_files(upload_id="upload_b")),
-                            color_scheme="cyan",
+                            color_scheme=NEUTRAL,
+                            variant="soft",
+                            size="3",
+                            font_size="15px",
+                            font_weight="medium",
+                            border="1px solid #d1d5db",
                             width="100%"
                         ),
+
+                        # 동적 카드 렌더링 구역
                         rx.foreach(
                             MatcherState.ref_files,
-                            lambda item, idx: rx.card(
+                            lambda item, idx: rx.box(
                                 rx.vstack(
                                     rx.hstack(
-                                        rx.text(f"📋 {item.name}", font_weight="bold", color="indigo"),
+                                        rx.text(item.name, font_weight="medium", color="#374151"),
                                         rx.spacer(),
                                         rx.button(
-                                            "🗑️ 삭제",
+                                            "삭제",
                                             on_click=lambda: MatcherState.remove_ref_file(idx),
                                             color_scheme="red",
+                                            variant="soft",
                                             size="1"
                                         )
                                     ),
-                                    rx.text("• 매칭 기준열 (파일A와 같은 순서 대응):", size="2"),
+                                    rx.text(
+                                        "매칭 기준열 (파일A와 같은 순서 대응)",
+                                        size="2", color="#6b7280"
+                                    ),
                                     rx.vstack(
                                         rx.foreach(
                                             item.cols_all,
@@ -370,6 +413,7 @@ def index() -> rx.Component:
                                                 c,
                                                 checked=item.keys_b.contains(c),
                                                 on_change=lambda checked: MatcherState.toggle_ref_key_b(idx, c, checked),
+                                                color_scheme=ACCENT,
                                             )
                                         ),
                                         spacing="1",
@@ -377,11 +421,10 @@ def index() -> rx.Component:
                                         max_height="120px",
                                         overflow_y="auto",
                                         width="100%",
-                                        border="1px solid #e2e8f0",
-                                        border_radius="md",
                                         padding="2",
+                                        style=LIST_BOX_STYLE,
                                     ),
-                                    rx.text("• 가져올 열 선택:", size="2"),
+                                    rx.text("가져올 열 선택", size="2", color="#6b7280"),
                                     rx.vstack(
                                         rx.foreach(
                                             item.cols_all,
@@ -389,6 +432,7 @@ def index() -> rx.Component:
                                                 c,
                                                 checked=item.cols.contains(c),
                                                 on_change=lambda checked: MatcherState.toggle_ref_col(idx, c, checked),
+                                                color_scheme=ACCENT,
                                             )
                                         ),
                                         spacing="1",
@@ -396,32 +440,75 @@ def index() -> rx.Component:
                                         max_height="120px",
                                         overflow_y="auto",
                                         width="100%",
-                                        border="1px solid #e2e8f0",
-                                        border_radius="md",
                                         padding="2",
+                                        style=LIST_BOX_STYLE,
                                     ),
                                     spacing="2", width="100%"
                                 ),
-                                width="100%", margin_top="2", background_color="#f8fafc"
+                                width="100%", margin_top="3", padding="4",
+                                style=SUBCARD_STYLE,
                             )
+                        ),
+                        width="100%",
+                    ),
+                    flex="1",
+                    padding="6",
+                    style=CARD_STYLE,
+                ),
+                width="100%",
+                flex_direction=["column", "column", "row"],
+                margin_bottom="6",
+            ),
+
+            # [3번 하단 와이드 배치 구역]
+            rx.card(
+                rx.vstack(
+                    rx.heading("3. 다중 매칭 실행 및 통합 저장", size="4", color="#374151"),
+                    rx.flex(
+                        rx.button(
+                            "다중 매칭 시작 및 통합 저장",
+                            on_click=MatcherState.run_multi_match,
+                            loading=MatcherState.is_processing,
+                            color_scheme=ACCENT,
+                            variant="solid",
+                            size="3",
+                        ),
+                        rx.button(
+                            "결과 파일 다운로드 (.xlsx)",
+                            on_click=MatcherState.download_result,
+                            color_scheme=ACCENT,
+                            variant="outline",
+                            size="3",
+                        ),
+                        spacing="3",
+                        width="100%",
+                        justify="center",
+                        margin_top="3"
+                    ),
+                    # 결과 메시지(성공/실패/안내)는 실행 시도 후에만 표시
+                    rx.cond(
+                        MatcherState.result_message != "",
+                        rx.box(
+                            rx.text(MatcherState.result_message, font_weight="medium", color="#374151", size="2"),
+                            padding="3", bg="#f9fafb", border_radius="6px", width="100%",
+                            border="1px solid #e5e7eb",
+                            margin_top="3",
                         )
                     ),
-                    width="100%", padding="5",
-                    style={"gridArea": "b"},
+                    width="100%",
+                    align_items="center"
                 ),
-
-                display="grid",
-                grid_template_columns="1fr 1fr",
-                grid_template_areas="'a b' 'c b'",
-                gap="24px",
                 width="100%",
-                align_items="start",
+                padding="6",
+                style=CARD_STYLE,
             ),
             spacing="5",
             width="1100px",
             max_width="95vw",
         ),
-        padding_top="3%", padding_bottom="5%"
+        padding_top="5%",
+        padding_bottom="5%",
+        background_color="#f3f4f6",
     )
 
 
