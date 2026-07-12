@@ -3,3 +3,5 @@ pandas
 xlsxwriter
 python-calamine
 openpyxl
+
+reflex==0.9.6.post1
