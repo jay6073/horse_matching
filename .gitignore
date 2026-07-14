@@ -1,6 +1,22 @@
-.states
-assets/external/
+# Reflex 자동 생성 파일
+.web/
+.states/
+reflex.lock/
+uploaded_files/
+
+# Python
 __pycache__/
 *.py[cod]
-*.db
-.web
+*.pyc
+.db
+
+# 데이터 파일 (사용자가 업로드/테스트하는 엑셀)
+*.xlsx
+*.xls
+
+# 가상환경
+.venv/
+venv/
+
+# IDE
+.idea/
