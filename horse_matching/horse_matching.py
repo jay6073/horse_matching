@@ -251,9 +251,10 @@ class MatcherState(rx.State):
 # [프론트엔드] 대시보드 화면 뷰 (View) 조립
 # ----------------------------------------------------------------------
 def index() -> rx.Component:
-    return rx.center(
-        rx.vstack(
+    return rx.box(
+        rx.center(
             rx.vstack(
+                rx.vstack(
                 rx.heading("📊 다중 엑셀 데이터 매칭 시스템", size="7", color="#111827"),
                 rx.text(
                     "자동 헤더 탐지 · 다중 파일 병합 · 불일치 사유 분석",
@@ -281,22 +282,30 @@ def index() -> rx.Component:
                                     lambda f: rx.text(f, size="2", color=ACCENT, font_weight="medium"),
                                 ),
                                 spacing="1",
+                                align_items="center",
+                                justify_content="center",
+                                height="100%",
                             ),
                             id="upload_a",
-                            border="1.5px dashed #d1d5db",
-                            border_radius="8px",
-                            padding="4",
+                            border="1.5px dashed #cbd5e1",
+                            border_radius="10px",
+                            bg="#f9fafb",
+                            padding="6",
+                            min_height="110px",
                             width="100%",
+                            display="flex",
+                            align_items="center",
+                            justify_content="center",
                         ),
                         rx.button(
                             "파일A 불러오기",
                             on_click=MatcherState.handle_upload_a(rx.upload_files(upload_id="upload_a")),
-                            color_scheme=NEUTRAL,
-                            variant="soft",
                             size="3",
                             font_size="15px",
                             font_weight="medium",
-                            border="1px solid #d1d5db",
+                            bg="#334155",
+                            color="white",
+                            _hover={"bg": "#1e293b"},
                             width="100%"
                         ),
                         rx.cond(
@@ -367,22 +376,30 @@ def index() -> rx.Component:
                                     lambda f: rx.text(f, size="2", color=ACCENT, font_weight="medium"),
                                 ),
                                 spacing="1",
+                                align_items="center",
+                                justify_content="center",
+                                height="100%",
                             ),
                             id="upload_b",
-                            border="1.5px dashed #d1d5db",
-                            border_radius="8px",
-                            padding="4",
+                            border="1.5px dashed #cbd5e1",
+                            border_radius="10px",
+                            bg="#f9fafb",
+                            padding="6",
+                            min_height="110px",
                             width="100%",
+                            display="flex",
+                            align_items="center",
+                            justify_content="center",
                         ),
                         rx.button(
                             "이 파일 추가",
                             on_click=MatcherState.handle_add_ref_file(rx.upload_files(upload_id="upload_b")),
-                            color_scheme=NEUTRAL,
-                            variant="soft",
                             size="3",
                             font_size="15px",
                             font_weight="medium",
-                            border="1px solid #d1d5db",
+                            bg="#334155",
+                            color="white",
+                            _hover={"bg": "#1e293b"},
                             width="100%"
                         ),
 
@@ -506,9 +523,13 @@ def index() -> rx.Component:
             width="1100px",
             max_width="95vw",
         ),
-        padding_top="5%",
-        padding_bottom="5%",
+        width="100%",
+        ),
+        min_height="100vh",
+        width="100%",
         background_color="#f3f4f6",
+        padding_top="64px",
+        padding_bottom="64px",
     )
 
 
